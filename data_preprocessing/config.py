@@ -3,7 +3,7 @@ import os
 # The path for raw data
 Magn_All_Save_Path = '../datasets/magn_all/'
 
-# After removing some stations, the list of remaining stations
+# After deleting some stations, the list of remaining stations
 Remaining_Sation_Path = '../datasets/remaining_stations'
 
 # The path where data is stored after data cleaning

@@ -212,7 +212,7 @@ class Exp_Eq_Fore(Exp_Basic):
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Test Loss: {3:.7f}".format(
                 epoch + 1, train_steps, train_loss, test_loss))
 
-            # remember best acc@1 and save checkpoint
+            # remember best mse and save checkpoint
             is_best = test_mse < best_mse
             best_mse = min(test_mse, best_mse)
             if is_best:
@@ -234,9 +234,8 @@ class Exp_Eq_Fore(Exp_Basic):
         plot_metrics_seq2seq(test_mape_list, os.path.join(checkpoint_path, 'figs'), 'test_mape.png', 'test_mape')
         plot_metrics_seq2seq(test_mspe_list, os.path.join(checkpoint_path, 'figs'), 'test_mspe.png', 'test_mspe')
 
-        # 保存损失和各项评价结果
-        save_data(train_loss_list, os.path.join(checkpoint_path, 'files'), 'train_loss.csv') # 损失是每100 iteration就保存一次均值
-        save_data(test_loss_list, os.path.join(checkpoint_path, 'files'), 'test_loss.csv') # 损失是每100 iteration就保存一次均值
+        save_data(train_loss_list, os.path.join(checkpoint_path, 'files'), 'train_loss.csv') 
+        save_data(test_loss_list, os.path.join(checkpoint_path, 'files'), 'test_loss.csv') 
         save_data(train_mae_list, os.path.join(checkpoint_path, 'files'), 'train_mae.csv')
         save_data(train_mse_list, os.path.join(checkpoint_path, 'files'), 'train_mse.csv')
         save_data(train_rmse_list, os.path.join(checkpoint_path, 'files'), 'train_rmse.csv')
@@ -248,7 +247,7 @@ class Exp_Eq_Fore(Exp_Basic):
         save_data(test_mape_list, os.path.join(checkpoint_path, 'files'), 'test_mape.csv')
         save_data(test_mspe_list, os.path.join(checkpoint_path, 'files'), 'test_mspe.csv')
 
-        # 量化模型容量
+        
         input_x = torch.randn_like(batch_x)[0].unsqueeze(0).float().to(self.device)
         input_x_mark = torch.randn_like(batch_x_mark)[0].unsqueeze(0).float().to(self.device)
         input_y = torch.randn_like(batch_y)[0].unsqueeze(0).float().to(self.device)

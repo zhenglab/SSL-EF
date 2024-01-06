@@ -22,7 +22,7 @@ def comp_boundary_seg(data, theta):
     IQR = quartile[2] - quartile[0]
     lower_boundary = quartile[0] - 1.5 * IQR
     upper_boundary = quartile[2] + 1.5 * IQR
-    # To determine the boundary for outliers
+    # Determine the boundary of outliers
     ultra_lower_bound = quartile[0] - theta * IQR
     ultra_upper_bound = quartile[2] + theta * IQR
     return lower_boundary, upper_boundary, ultra_lower_bound, ultra_upper_bound
@@ -37,20 +37,20 @@ def quartile_oneFea_seg_norm(df):
     data = np.array(df)
     lower_boun, upper_boun, ultra_lower_boun, ultra_upper_boun = comp_boundary_seg(data, theta)
 
-    # Identify values above the upper limit in the original data
+    # Identify values above the upper limit in the raw data
     tmp_upper = df[df > upper_boun]
     tmp_upper_max = tmp_upper.max()
     tmp_upper_min = tmp_upper.min()
-    # Identify values below the lower limit in the original data
+    # Identify values below the lower limit in the raw data
     tmp_lower = df[df < lower_boun]
     tmp_lower_max = tmp_lower.max()
     tmp_lower_min = tmp_lower.min()
-    # Identify values within the normal range in the original data
+    # Identify values within the normal range in the raw data
     tmp_normal = df[(df > lower_boun) & (df < upper_boun)]
     tmp_normal_max = tmp_normal.max()
     tmp_normal_min = tmp_normal.min()
 
-    # Subsection mapping
+    # The raw data is divided into three segments and then mapped respectively.
     if tmp_upper.size != 0:
         tmp_upper_norm = mapping(upper_boun, ultra_upper_boun, tmp_upper_max, tmp_upper_min, tmp_upper)
     else:
@@ -99,17 +99,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    # Obtain data after cleaning and filling
     if args.data_type == 'magn':
         magn_fill_files = sorted(os.listdir(os.path.join(Magn_Imputation_Path, args.cleaning, args.filling)))
     
-
-    # Starting normalization operation
     if args.data_type == 'magn':
         if args.norm_data == 'oneSta_oneFea':
             for file in magn_fill_files:
                 magn_data = pd.read_csv(os.path.join(Magn_Imputation_Path, args.cleaning, args.filling, file))
                 magn_data.drop('Unnamed: 0', axis=1, inplace=True)
+                
+                # Data normalization
                 magn_norm = norm_oneSta_oneFea(magn_data, args.norm_type)
 
                 save_path = os.path.join(Magn_Norm_Path, args.cleaning, args.filling, args.norm_data, args.norm_type)

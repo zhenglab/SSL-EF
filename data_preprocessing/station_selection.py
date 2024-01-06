@@ -8,7 +8,7 @@ from toolkit import *
 if __name__ == '__main__':
     magn_all_files = sorted(os.listdir(Magn_All_Save_Path))
 
-    # Deleted station
+    # Deleted stations
     magn_delete_sta = ['119_magn.csv', '59_magn.csv', '229_magn.csv', '82_magn.csv',
                        '32_magn.csv', '84_magn.csv', '132_magn.csv']
     

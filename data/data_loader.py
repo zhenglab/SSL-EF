@@ -4,7 +4,6 @@ import pandas as pd
 
 import torch
 from torch.utils.data import Dataset, DataLoader
-# from sklearn.preprocessing import StandardScaler
 
 from utils.tools import stamp2date
 from utils.timefeatures import time_features
@@ -15,12 +14,11 @@ warnings.filterwarnings('ignore')
 class Dataset_AETA(Dataset):
     def __init__(self, root_path, data_type='magn', fea_use='all', flag='train', seq_len=1008, label_len=252, pred_len=1008,
                  features='M', scale=False, inverse=False, timeenc=1, freq='t'):
-        # size [seq_len, label_len, pred_len]
-        # info
+
         self.seq_len = seq_len
         self.label_len = label_len
         self.pred_len = pred_len
-        # init
+
         assert flag in ['train', 'test']
         
         self.flag = flag

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-python data_type_selection.py
+python station_selection.py
 
 python data_cleaning.py
 

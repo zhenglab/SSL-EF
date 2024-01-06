@@ -14,7 +14,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    # Only select the stations left after screening
+    # Only select remaining stations
     magn_all_files = pd.read_csv(os.path.join(Remaining_Sation_Path, 'magn.csv'))
 
     if args.data_type == 'magn':
@@ -22,6 +22,7 @@ if __name__ == '__main__':
         for file in sta_name:
             magn_data = pd.read_csv(os.path.join(Magn_All_Save_Path, file))
 
+            # Data cleaning
             if args.cleaning == 'fill_0':
                 magn_data_na = magn_data.fillna(0.)
 

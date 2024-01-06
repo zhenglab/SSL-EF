@@ -156,14 +156,14 @@ def main():
         fn_list.append([epoch, fn])
         auc_score_list.append([epoch, auc_score])
 
-        # remember best auc@1 and save checkpoint
+        # remember best auc and save checkpoint
         is_best = auc_score > best_auc
         best_auc = max(auc_score, best_auc)
 
         if is_best:
             torch.save(model.state_dict(), os.path.join(results_path, 'results.pth'))
 
-    save_data(loss_list, os.path.join(results_path, 'files'), 'loss.csv') # 损失是每100 iteration就保存一次均值
+    save_data(loss_list, os.path.join(results_path, 'files'), 'loss.csv') 
     save_data(accuracy_list, os.path.join(results_path, 'files'), 'accuracy.csv')
     save_data(fp_list, os.path.join(results_path, 'files'), 'fp.csv')
     save_data(fn_list, os.path.join(results_path, 'files'), 'fn.csv')

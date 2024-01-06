@@ -10,13 +10,15 @@ This repository provides the official PyTorch implementation of our paper "Short
 
 ## Datasets
 
-- Download [AETA](https://platform.aeta.cn/zh-CN/competitionpage/download) dataset and and [earthquake directory](https://news.ceic.ac.cn/index.html?time=1704271080).
+- Download [AETA](https://platform.aeta.cn/zh-CN/competitionpage/download) dataset and [earthquake directory](https://news.ceic.ac.cn/index.html?time=1704271080).
 
-- All downloaded electromagnetic data is placed in the `datasets/magn_all`, and a CSV file contains all the data of a station.
+- All downloaded electromagnetic data are stored in the `datasets/magn_all` directory, comprising 159 CSV files. Each file within this directory contains the electromagnetic data from a single observation station.
 
 ## Data Preprocessing
 
 - The data preprocessing includes several crucial steps: station selection, data cleaning, missing data imputation, data normalization, and dataset construction.
+
+- Perform data preprocessing using the following script.
 
 ```bash
 bash data_preporcessing/magn.sh
@@ -26,6 +28,8 @@ bash data_preporcessing/magn.sh
 
 - We design the prediction task as a pretext task, leveraging the past week's observational data to predict the coming week's data.
 
+- To do the pretext prediction task on a large-scale dataset composed of all samples, run:
+
 ```bash
 python main_pretext.py
 ```
@@ -33,6 +37,8 @@ python main_pretext.py
 ## Downstream Task
 
 - We set the classification task as a downstream task, focusing on whether a major earthquake occurs in the coming week.
+
+- To do the downstream classification task on a small-scale yet balanced dataset built through undersampling, run:
 
 ```bash
 python main_downstream.py

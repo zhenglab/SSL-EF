@@ -18,7 +18,7 @@ class Dataset_AETA_cls(Dataset):
         self.seq_len = seq_len
         self.pred_len = pred_len
         self.label_len = label_len
-        # init
+
         assert flag in ['train', 'test']
         
         self.flag = flag
@@ -61,7 +61,6 @@ class Dataset_AETA_cls(Dataset):
                 # Obtain binary labels for each sample
                 label = label_train_all.iloc[i, 1]
                 
-                # Obtain the names of the files containing the source and target sequences
                 src_name = label_train_all.iloc[i, 0]
                 trg_name_num = int(src_name.split('.')[0].split('_')[1]) + 144
                 trg_name = src_name.split('_')[0] + '_' + str(trg_name_num) + '.csv'

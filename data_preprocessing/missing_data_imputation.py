@@ -16,7 +16,7 @@ def linear_interpolate(data, missing, threshold_time):
         if fill_num < threshold_time:
             # Create an empty dataframe with the same number of rows as the one to be added
             fill_nan = pd.DataFrame(np.full([fill_num, len(data.columns.values)], np.nan), columns=data.columns.values)
-            # Determine the starting position of the insertion point and insert data
+            # Determine the starting position of the insertion point and subsequently insert data
             left_data = data[data['TimeStamp'] == left_time]
             left_index = left_data.index.values[0]
             above = data.iloc[:left_index+1, :]
@@ -44,13 +44,13 @@ if __name__ == '__main__':
     if args.data_type == 'magn':
         magn_clean_files = sorted(os.listdir(os.path.join(Magn_Cleaning_Path, args.cleaning)))
 
-    # Start filling
     if args.data_type == 'magn':
         for file in magn_clean_files:
             magn_data = pd.read_csv(os.path.join(Magn_Cleaning_Path, args.cleaning, file))
             magn_data.drop('Unnamed: 0', axis=1, inplace=True)
             magn_missing = pd.read_csv(os.path.join(Magn_Missing_Path, file))
-
+            
+            # Missing data imputation
             if args.filling == 'linear_interpolate':
                 filling_data = linear_interpolate(magn_data, magn_missing, args.threshold_time)
 
