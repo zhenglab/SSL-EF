@@ -10,7 +10,7 @@ This repository provides the official PyTorch implementation of our paper "Short
 
 ## Datasets
 
-- Download [AETA](https://platform.aeta.cn/zh-CN/competitionpage/download) dataset and [earthquake directory](https://news.ceic.ac.cn/index.html?time=1704271080).
+- Download [AETA](https://platform.aeta.cn/zh-CN/competitionpage/download) dataset and [earthquake catalog](https://news.ceic.ac.cn/index.html?time=1704271080).
 
 - All downloaded electromagnetic data are stored in the `datasets/magn_all` directory, comprising 159 CSV files. Each file within this directory contains the electromagnetic data from a single observation station.
 
