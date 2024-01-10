@@ -50,7 +50,7 @@ parser.add_argument('--num_layers', type=int, default=2)
 parser.add_argument('--optimizer', type=str, default='Adam', help='the optimizer: SGD|Adam')
 parser.add_argument('--model_pre', type=str, default='Eq_Fore', help='network: Eq_Fore')
 parser.add_argument('--model_cls', type=str, default='BiLSTM', help='network: BiLSTM')
-parser.add_argument('--model_pred_state', type=str, default='Resume')
+parser.add_argument('--model_pred_state', type=str, default='resume')
 
 parser.add_argument('--seq_len', type=int, default=1008, help='input sequence length of encoder')
 parser.add_argument('--label_len', type=int, default=144, help='start token length of decoder')
