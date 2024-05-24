@@ -4,33 +4,36 @@ import torch
 
 from exp.exp_eq_fore import Exp_Eq_Fore
 from utils.tools import mkdir
+import random
+import numpy as np
 
 parser = argparse.ArgumentParser(description='Earthquake Forecasting')
 
 parser.add_argument('--model', type=str, default='Eq_Fore',help='model of experiment')
 
-parser.add_argument('--dataroot', type=str, default='../datasets/data_input', help='path of data')
+parser.add_argument('--dataroot', type=str, default='./datasets/magn_all', help='path of data')
 parser.add_argument('--data_type', type=str, default='magn') 
 parser.add_argument('--cleaning', type=str, default='fill_0') 
 parser.add_argument('--filling', type=str, default='linear_interpolate') 
-parser.add_argument('--threshold_time', type=int, default=72)
-parser.add_argument('--norm_data', type=str, default='oneSta_oneFea')
-parser.add_argument('--norm_type', type=str, default='quartile_seg')
-parser.add_argument('--fea_select', type=str, default='Fourier_power_0_15')
+parser.add_argument('--threshold_time', type=int, default=72) 
+parser.add_argument('--norm_data', type=str, default='oneSta_oneFea') 
+parser.add_argument('--norm_type', type=str, default='quartile_seg') 
+parser.add_argument('--fea_select', type=str, default='all') 
 parser.add_argument('--fea_use', type=str, default='Fourier_power_0_15')
 parser.add_argument('--dataset_split_time', type=str, default='2022-01-01 00:00:00') 
-parser.add_argument('--input_length', type=str, default='7days')
-parser.add_argument('--input_sel_type', type=str, default='Slide')
-parser.add_argument('--input_window_size', type=int, default=1008) 
+parser.add_argument('--input_length', type=str, default='7days') 
+parser.add_argument('--input_sel_type', type=str, default='Slide') 
+parser.add_argument('--input_window_size', type=int, default=1008)
 parser.add_argument('--predict_size', type=int, default=7) 
 parser.add_argument('--class_type', type=str, default='binary_cls') 
-parser.add_argument('--num_classes', type=int, default=2) 
+parser.add_argument('--num_classes', type=int, default=2)
+parser.add_argument('--sample', type=str, default='undersampling') 
 parser.add_argument('--train_phase', type=str, default='train') 
 
 parser.add_argument('--features', type=str, default='M', help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
 parser.add_argument('--target', type=str, default='OT', help='target feature in S or MS task')
 parser.add_argument('--freq', type=str, default='t', help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
-parser.add_argument('--checkpoints', type=str, default='../checkpoints', help='location of model checkpoints')
+parser.add_argument('--checkpoints', type=str, default='./checkpoints', help='location of model checkpoints')
 
 parser.add_argument('--seq_len', type=int, default=1008, help='input sequence length of encoder')
 parser.add_argument('--label_len', type=int, default=144, help='start token length of decoder')
@@ -58,7 +61,7 @@ parser.add_argument('--mix', action='store_false', help='use mix attention in ge
 parser.add_argument('--cols', type=str, nargs='+', help='certain cols from the data files as the input features')
 parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
 parser.add_argument('--itr', type=int, default=1, help='experiments times')
-parser.add_argument('--train_epochs', type=int, default=50, help='train epochs')
+parser.add_argument('--train_epochs', type=int, default=2, help='train epochs')
 parser.add_argument('--batch_size', type=int, default=4, help='batch size of train input data')
 parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
@@ -72,8 +75,14 @@ parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')
 parser.add_argument('--gpu', type=int, default=3, help='gpu')
 parser.add_argument('--use_multi_gpu', action='store_true', help='use multiple gpus', default=False)
 parser.add_argument('--devices', type=str, default='0,1,2,3',help='device ids of multile gpus')
+parser.add_argument('--seed', type=int, default=77, help='The random seed')
 
 args = parser.parse_args()
+
+random.seed(args.seed)
+torch.manual_seed(args.seed)
+np.random.seed(args.seed)
+print(random.random())
 
 args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
 

@@ -5,7 +5,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from utils.tools import stamp2date
+from utils.tools import StandardScaler, stamp2date
 from utils.timefeatures import time_features
 
 import warnings
@@ -18,7 +18,7 @@ class Dataset_AETA(Dataset):
         self.seq_len = seq_len
         self.label_len = label_len
         self.pred_len = pred_len
-
+        # init
         assert flag in ['train', 'test']
         
         self.flag = flag
@@ -128,10 +128,8 @@ class Dataset_AETA(Dataset):
         return len(self.src_list)
 
 
-
 def choose_input_fea(data_type, fea_use, data):
     if data_type == 'magn':
         if fea_use == 'Fourier_power_0_15':
-            fea_data = pd.concat([data.iloc[:, :2], data['magn@power_0_5'], data['magn@power_5_10'], data['magn@power_5_10']], axis=1)
-
-    return fea_data
+            fea_data = pd.concat([data.iloc[:, :2], data['magn@power_0_5'], data['magn@power_5_10'], data['magn@power_10_15']], axis=1)
+        return fea_data

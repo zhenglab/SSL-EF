@@ -19,10 +19,10 @@ from sklearn.metrics import accuracy_score, roc_curve, auc
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataroot', type=str, default='./datasets/magn_all', help='path of data')
+parser.add_argument('--dataroot', type=str, default='./datasets', help='path of data')
 parser.add_argument('--data_type', type=str, default='magn') 
-parser.add_argument('--cleaning', type=str, default='fill_0') 
-parser.add_argument('--filling', type=str, default='linear_interpolate') 
+parser.add_argument('--cleaning', type=str, default='fill_0')
+parser.add_argument('--filling', type=str, default='linear_interpolate')
 parser.add_argument('--threshold_time', type=int, default=72) 
 parser.add_argument('--norm_data', type=str, default='oneSta_oneFea') 
 parser.add_argument('--norm_type', type=str, default='quartile_seg') 
@@ -30,15 +30,15 @@ parser.add_argument('--fea_select', type=str, default='all')
 parser.add_argument('--fea_use', type=str, default='Fourier_power_0_15')
 parser.add_argument('--dataset_split_time', type=str, default='2022-01-01 00:00:00') 
 parser.add_argument('--input_length', type=str, default='7days')  
-parser.add_argument('--input_sel_type', type=str, default='Slide')  
+parser.add_argument('--input_sel_type', type=str, default='Slide') 
 parser.add_argument('--input_window_size', type=int, default=1008) 
-parser.add_argument('--predict_size', type=int, default=7)
+parser.add_argument('--predict_size', type=int, default=7) 
 parser.add_argument('--class_type', type=str, default='binary_cls') 
 parser.add_argument('--num_classes', type=int, default=2) 
 parser.add_argument('--sample', type=str, default='undersampling') 
 parser.add_argument('--train_phase', type=str, default='train') 
 
-parser.add_argument('--epochs', type=int, default=4, help='number of total epochs to run')
+parser.add_argument('--epochs', type=int, default=100, help='number of total epochs to run')
 parser.add_argument('--batch_size', type=int, default=4, help='batch size')
 parser.add_argument('--lr', type=float, default=0.00001, help='initial (base) learning rate')
 parser.add_argument('--num_workers', default=4, type=int, help='number of data loading workers')
@@ -94,18 +94,14 @@ def main():
     if args.gpu is not None:
         print("Use GPU: {} for training".format(args.gpu))
 
-  
+   
     data_path = os.path.join(args.dataroot, args.data_type, args.cleaning, args.filling, args.norm_data, args.norm_type, args.fea_select,
                                  'Input_%s_%s_Output_%s' % (args.input_length, args.input_sel_type, args.class_type))
-    checkpoint_path = os.path.join(args.checkpoints, args.data_type, args.cleaning, args.filling, args.norm_data,
-                                   args.norm_type, args.fea_use,
-                                   'Input_%d_%s_Output_%d' % (args.seq_len, args.input_sel_type, args.pred_len), args.model_pre)
-    results_path = os.path.join(args.results, args.data_type, args.cleaning, args.filling, args.norm_data,
-                                   args.norm_type, args.fea_use,
-                                   'Input_%d_%s_Output_%s_%s' % (args.seq_len, args.input_sel_type, args.class_type, args.sample), args.model_cls, args.model_pred_state)
-    mkdir(results_path)
+    # results_path = os.path.join(args.results, args.data_type, args.cleaning, args.filling, args.norm_data,
+    #                                args.norm_type, args.fea_use,
+    #                                'Input_%d_%s_Output_%s_%s' % (args.seq_len, args.input_sel_type, args.class_type, args.sample), args.model_cls, args.model_pred_state)
+    results_path = args.results
 
-    train_data, train_loader = get_data(args, data_path, 'train')
     test_data, test_loader = get_data(args, data_path, 'test')
 
     if args.model_pre == 'Eq_Fore':
@@ -115,104 +111,31 @@ def main():
                          args.dropout, args.attn, args.embed, args.freq, args.activation, args.output_attention, 
                          args.distil, args.mix, device).float()
 
-    if args.model_pred_state == 'frozen':
-        checkpoint = torch.load(os.path.join(checkpoint_path, 'checkpoint.pth'))
-        model_pre.load_state_dict(checkpoint)
-        for name, params in model_pre.named_parameters():
-            params.requires_grad = False
-    elif args.model_pred_state == 'resume':
-        checkpoint = torch.load(os.path.join(checkpoint_path, 'checkpoint.pth'))
-        model_pre.load_state_dict(checkpoint)
-        for name, params in model_pre.named_parameters():
-            params.requires_grad = True
-    elif args.model_pred_state == 'free':
-        model_pre = model_pre
-
     if args.model_cls == 'BiLSTM':
         model_cls = BiLSTM(args.d_model, args.hidden_nc, args.num_layers, args.num_classes, args)    
     
-    
     model = Info_Cls(model_pre, model_cls)
 
-    """ number of parameters """
-    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print('[Info] Number of parameters: {}'.format(num_params))
+    result = torch.load(os.path.join(results_path, 'results.pth'))
+    model.load_state_dict(result)
+    
 
     # set GPU
     if args.gpu is not None:
         torch.cuda.set_device(args.gpu)
         model = model.cuda(args.gpu)
-        memory_origin = torch.cuda.memory_allocated(args.gpu)
         print('Memory_origin:', torch.cuda.memory_allocated(args.gpu))
     print(model)
 
 
-    criterion = nn.CrossEntropyLoss()
-    parameters = list(filter(lambda p: p.requires_grad, model.parameters()))
-    optimizer = optim.Adam(parameters, lr=args.lr)
 
-    best_auc = 0.
-    loss_list = []
-    test_loss_list = []
-    accuracy_list = []
-    fp_list = []
-    fn_list = []
-    auc_score_list = []
-    is_best = False
-    iter_time_all = []
-    test_time_all = []
-
-    for epoch in range(1, args.epochs+1):
-        loss_list, features, iter_time = train(train_loader, model, criterion, optimizer, epoch, loss_list, args)
-        iter_time_all.append(iter_time)
-        # remember best auc and save checkpoint
-        if epoch >= 80:
-            test_loss_list, true_label, predictions, model_output, memory_allocate, memory_reserved, memory_usage, test_time  = test(test_loader, model, criterion, test_loss_list, args)
-            accuracy, fp, fn, auc_score = evaluate(true_label, predictions, model_output)
-
-            test_time_all.append(test_time)
-            accuracy_list.append([epoch, accuracy])
-            fp_list.append([epoch, fp])
-            fn_list.append([epoch, fn])
-            auc_score_list.append([epoch, auc_score])
-
-            # remember best auc@1 and save checkpoint
-            is_best = auc_score > best_auc
-            best_auc = max(auc_score, best_auc)
+    true_label, predictions, model_output, test_time  = test(test_loader, model, args)
+    accuracy, fp, fn, auc_score = evaluate(true_label, predictions, model_output)
 
 
-        if is_best:
-            torch.save(model.state_dict(), os.path.join(results_path, 'results.pth'))
-            save_data(true_label, os.path.join(results_path, 'files'), 'best_true_label.csv')
-            save_data(predictions, os.path.join(results_path, 'files'), 'best_predictions.csv')
-            save_data(model_output, os.path.join(results_path, 'files'), 'best_model_output.csv')
+    print('Accuracy: %.3f' % accuracy, 'AUC: %.3f' % auc_score, 'FNR: %.3f' % fn, 'FPR: %.3f' % fp)
+    print(111)
 
-    save_data(loss_list, os.path.join(results_path, 'files'), 'loss.csv') 
-    save_data(test_loss_list, os.path.join(results_path, 'files'), 'test_loss.csv')
-    save_data(accuracy_list, os.path.join(results_path, 'files'), 'accuracy.csv')
-    save_data(fp_list, os.path.join(results_path, 'files'), 'fp.csv')
-    save_data(fn_list, os.path.join(results_path, 'files'), 'fn.csv')
-    save_data(auc_score_list, os.path.join(results_path, 'files'), 'auc.csv')
-
-    plot_loss(loss_list, os.path.join(results_path, 'figs'), 'loss.png')
-    plot_loss(test_loss_list, os.path.join(results_path, 'figs'), 'test_loss.png')
-    plot_metrics_one(accuracy_list, os.path.join(results_path, 'figs'), 'accuracy.png', 'Accuracy')
-    plot_metrics_one(fp_list, os.path.join(results_path, 'figs'), 'fp.png', 'False Positive Rate')
-    plot_metrics_one(fn_list, os.path.join(results_path, 'figs'), 'fn.png', 'False Negative Rate')
-    plot_metrics_one(auc_score_list, os.path.join(results_path, 'figs'), 'auc.png', 'AUC')
-
-    input_f = torch.randn_like(torch.FloatTensor(train_data.src_list[0]).unsqueeze(0)).cuda(args.gpu)
-    input_mask = torch.randn_like(torch.FloatTensor(train_data.src_stamp_list[0]).unsqueeze(0)).cuda(args.gpu)
-
-    flops, params = profile(model, inputs=(input_f, input_mask))
-    print("FLOPs: %.5fM" % (flops / 1e6), "Params: %.5fM" % (params / 1e6))
-
-    if args.gpu is not None:
-        save_txt_gpu_test(os.path.join(results_path, 'files'), 'parameters.txt', args, 
-                          dict(Counter(train_data.label_bin_list)), 
-                          dict(Counter(test_data.label_bin_list)), 
-                          params, flops, num_params, memory_origin, memory_allocate, memory_reserved, memory_usage,
-                          np.mean(np.array(iter_time_all)), np.mean(np.array(test_time_all)))
     
 def get_data(args, data_path, flag):
         timeenc = 0 if args.embed!='timeF' else 1
@@ -237,53 +160,14 @@ def get_data(args, data_path, flag):
 
         return data_set, data_loader
 
-def train(train_loader, model, criterion, optimizer, epoch, loss_list, args):
-    model.train()
-    running_loss = 0.0
-    time_now = time.time()
-    iter_count = 0
-    speed_all = []
 
-    for i, (batch_x, batch_x_mark, labels) in enumerate(train_loader):
-        iter_count += 1
-        
-        batch_x = batch_x.to(torch.float32)
-        batch_x_mark = batch_x_mark.to(torch.float32)
-        labels = labels.to(torch.long)
-
-        if args.gpu is not None:
-            batch_x = batch_x.cuda(args.gpu)
-            batch_x_mark = batch_x_mark.cuda(args.gpu)
-            labels = labels.cuda(args.gpu)
-
-        outputs = model(batch_x, batch_x_mark)
-        loss = criterion(outputs, labels)
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-
-        if (i+1) % 100 == 0:
-            print('[Epoch:%d Iteration:%5d] loss: %.3f' % (epoch, i+1, running_loss / iter_count))
-            speed = (time.time()-time_now)/iter_count
-            speed_all.append(speed)
-            loss_list.append(running_loss / iter_count)
-            running_loss = 0.0
-            iter_count = 0
-            time_now = time.time()
-
-    return loss_list, batch_x, np.mean(np.array(speed_all))
-
-def test(test_loader, model, criterion, loss_list, args):
+def test(test_loader, model, args):
     model.eval()
 
     test_time_all = []
     true_label = []
     predictions = []
     model_output = []
-    running_loss = 0.0
     with torch.no_grad():
         for i, (batch_x, batch_x_mark, labels) in enumerate(test_loader, 0):
             test_time_start = time.time()
@@ -302,28 +186,14 @@ def test(test_loader, model, criterion, loss_list, args):
 
             test_time_end = time.time() - test_time_start
             test_time_all.append(test_time_end)
-            loss = criterion(outputs, labels)
-            running_loss += loss.item()
 
-            if args.gpu is not None:
-                memory_allocate = torch.cuda.memory_allocated(args.gpu)
-                memory_reserved = torch.cuda.memory_reserved(args.gpu)
-                memory_usage = memory_allocate + memory_reserved
-            else:
-                memory_allocate = 0
-                memory_reserved = 0
-                memory_usage = 0
-
+            
             pred = torch.argmax(outputs, dim=1)
 
             true_label.append(labels.cpu().numpy())
             predictions.append(pred.cpu().numpy())
             model_output.append(outputs.cpu().numpy())
 
-            if (i+1) % 100 == 0:
-                print('[Iteration:%5d] loss: %.3f' % (i+1, running_loss / 100))
-                loss_list.append(running_loss / 100)
-                running_loss = 0.0
 
     true_label = np.concatenate(true_label, axis=0)
     predictions = np.concatenate(predictions, axis=0)
@@ -334,7 +204,7 @@ def test(test_loader, model, criterion, loss_list, args):
     test_time = np.mean(np.array(test_time_all))
     print('test time:{}'.format(test_time))
 
-    return loss_list, true_label, predictions, model_output, memory_allocate, memory_reserved, memory_usage, test_time
+    return true_label, predictions, model_output, test_time
 
 
 def evaluate(label, pred, output):

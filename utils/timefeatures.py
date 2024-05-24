@@ -152,5 +152,4 @@ def time_features(dates, timeenc=1, freq='h'):
         for feat in time_features_from_frequency_str(freq):
             out_list.append(feat(dates)) 
         out = np.vstack(out_list).transpose(1, 0)
-        out2 = np.vstack([feat(dates) for feat in time_features_from_frequency_str(freq)]).transpose(1,0)
         return out

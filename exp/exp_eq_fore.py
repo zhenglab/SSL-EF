@@ -68,7 +68,7 @@ class Exp_Eq_Fore(Exp_Basic):
                             self.args.features, False, False, timeenc, self.args.freq)
 
         if flag == 'test':
-            shuffle_flag = False; drop_last = False; batch_size = args.batch_size; freq=args.freq
+            shuffle_flag = False; drop_last = False; batch_size = 1; freq=args.freq
         else:
             shuffle_flag = True; drop_last = True; batch_size = args.batch_size; freq=args.freq
 
@@ -93,28 +93,40 @@ class Exp_Eq_Fore(Exp_Basic):
 
     def vali(self, vali_data, vali_loader, criterion):
         self.model.eval()
+        test_time_all = []
         total_loss = []
         preds = []
         trues = []
         with torch.no_grad():
+            
             for i, (batch_x,batch_y,batch_x_mark,batch_y_mark) in enumerate(vali_loader):
+                test_time_start = time.time()
                 pred, true = self._process_one_batch(
                     vali_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
+                test_time_end = (time.time() - test_time_start)
+                test_time_all.append(test_time_end)
                 loss = criterion(pred.detach().cpu(), true.detach().cpu())
                 total_loss.append(loss)
                 preds.append(pred.detach().cpu().numpy())
                 trues.append(true.detach().cpu().numpy())
 
+            
             total_loss = np.average(total_loss)
             preds = np.vstack(preds)
             trues = np.vstack(trues)
+            print(preds.shape)
+            print(trues.shape)
+            print('test shape:', preds.shape, trues.shape)
             preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
             trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
+            print('test shape:', preds.shape, trues.shape)
             mae, mse, rmse, mape, mspe = metric(preds, trues)
             print('mse:{}, mae:{}'.format(mse, mae))
+            test_time = np.mean(np.array(test_time_all))
+            print('test time:{}'.format(test_time))
 
             self.model.train()
-        return total_loss, mae, mse, rmse, mape, mspe
+        return total_loss, mae, mse, rmse, mape, mspe, test_time
 
     def train(self, checkpoint_path):
         train_data, train_loader = self._get_data(flag = 'train')
@@ -122,8 +134,6 @@ class Exp_Eq_Fore(Exp_Basic):
 
         if not os.path.exists(checkpoint_path):
             os.makedirs(checkpoint_path)
-
-        time_now = time.time()
         
         train_steps = len(train_loader)
         
@@ -148,8 +158,12 @@ class Exp_Eq_Fore(Exp_Basic):
         test_mape_list = []
         test_mspe_list = []
 
+        speed_all_list = []
+        test_infer_list = []
+
         best_mse = 1e9
 
+        time_now = time.time()
         for epoch in range(self.args.train_epochs):
             iter_count = 0
             train_loss = []
@@ -167,15 +181,7 @@ class Exp_Eq_Fore(Exp_Basic):
                 train_trues.append(true.detach().cpu().numpy())
                 loss = criterion(pred, true)
                 train_loss.append(loss.item())
-                
-                if (i+1) % 100==0:
-                    print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
-                    speed = (time.time()-time_now)/iter_count
-                    left_time = speed*((self.args.train_epochs - epoch)*train_steps - i)
-                    print('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
-                    iter_count = 0
-                    time_now = time.time()
-                
+
                 if self.args.use_amp:
                     scaler.scale(loss).backward()
                     scaler.step(model_optim)
@@ -183,15 +189,27 @@ class Exp_Eq_Fore(Exp_Basic):
                 else:
                     loss.backward()
                     model_optim.step()
+                
+                if (i+1) % 100==0:
+                    print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
+                    speed = (time.time()-time_now)/iter_count
+                    speed_all_list.append(speed)
+                    left_time = speed*((self.args.train_epochs - epoch)*train_steps - i)
+                    print('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
+                    iter_count = 0
+                    time_now = time.time()
 
             adjust_learning_rate(model_optim, epoch+1, self.args)
 
+      
             train_loss = np.average(train_loss)
             train_loss_list.append(train_loss)
             train_preds = np.array(train_preds)
             train_trues = np.array(train_trues)
+            print('train shape:', train_preds.shape, train_trues.shape)
             train_preds = train_preds.reshape(-1, train_preds.shape[-2], train_preds.shape[-1])
             train_trues = train_trues.reshape(-1, train_trues.shape[-2], train_trues.shape[-1])
+            print('train shape:', train_preds.shape, train_trues.shape)
             train_mae, train_mse, train_rmse, train_mape, train_mspe = metric(train_preds, train_trues)
             print('train_mae:{}, train_mse:{}'.format(train_mae, train_mse))
             train_mae_list.append(train_mae)
@@ -200,13 +218,14 @@ class Exp_Eq_Fore(Exp_Basic):
             train_mape_list.append(train_mape)
             train_mspe_list.append(train_mspe)
 
-            test_loss, test_mae, test_mse, test_rmse, test_mape, test_mspe = self.vali(test_data, test_loader, criterion)
+            test_loss, test_mae, test_mse, test_rmse, test_mape, test_mspe, test_time = self.vali(test_data, test_loader, criterion)
             test_loss_list.append(test_loss)
             test_mae_list.append(test_mae)
             test_mse_list.append(test_mse)
             test_rmse_list.append(test_rmse)
             test_mape_list.append(test_mape)
             test_mspe_list.append(test_mspe)
+            test_infer_list.append(test_time)
 
             print("Epoch: {} cost time: {}".format(epoch+1, time.time()-epoch_time))
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Test Loss: {3:.7f}".format(
@@ -221,6 +240,10 @@ class Exp_Eq_Fore(Exp_Basic):
 
         self.model.load_state_dict(torch.load(best_model_path))
 
+        iter_speed_avg = np.mean(np.array(speed_all_list))
+        test_infer_avg = np.mean(np.array(test_infer_list))
+        print('speed iter:%fs' % (iter_speed_avg), 'test inference: %fs' % (test_infer_avg))
+
         plot_loss(train_loss_list, os.path.join(checkpoint_path, 'figs'), 'train_loss.png')
         plot_loss(test_loss_list, os.path.join(checkpoint_path, 'figs'), 'test_loss.png')
         plot_metrics_seq2seq(train_mae_list, os.path.join(checkpoint_path, 'figs'), 'train_mae.png', 'train_mae')
@@ -233,6 +256,9 @@ class Exp_Eq_Fore(Exp_Basic):
         plot_metrics_seq2seq(test_rmse_list, os.path.join(checkpoint_path, 'figs'), 'test_rmse.png', 'test_rmse')
         plot_metrics_seq2seq(test_mape_list, os.path.join(checkpoint_path, 'figs'), 'test_mape.png', 'test_mape')
         plot_metrics_seq2seq(test_mspe_list, os.path.join(checkpoint_path, 'figs'), 'test_mspe.png', 'test_mspe')
+        plot_metrics_seq2seq(speed_all_list, os.path.join(checkpoint_path, 'figs'), 'train_iter_speed.png', 'train_iter_speed')
+        plot_metrics_seq2seq(test_infer_list, os.path.join(checkpoint_path, 'figs'), 'test_infer_speed.png', 'test_infer_speed')
+
 
         save_data(train_loss_list, os.path.join(checkpoint_path, 'files'), 'train_loss.csv') 
         save_data(test_loss_list, os.path.join(checkpoint_path, 'files'), 'test_loss.csv') 
@@ -246,17 +272,20 @@ class Exp_Eq_Fore(Exp_Basic):
         save_data(test_rmse_list, os.path.join(checkpoint_path, 'files'), 'test_rmse.csv')
         save_data(test_mape_list, os.path.join(checkpoint_path, 'files'), 'test_mape.csv')
         save_data(test_mspe_list, os.path.join(checkpoint_path, 'files'), 'test_mspe.csv')
+        save_data(speed_all_list, os.path.join(checkpoint_path, 'files'), 'train_iter_speed.csv')
+        save_data(test_infer_list, os.path.join(checkpoint_path, 'files'), 'test_infer_speed.csv')
 
-        
+
         input_x = torch.randn_like(batch_x)[0].unsqueeze(0).float().to(self.device)
         input_x_mark = torch.randn_like(batch_x_mark)[0].unsqueeze(0).float().to(self.device)
         input_y = torch.randn_like(batch_y)[0].unsqueeze(0).float().to(self.device)
         input_y_mark = torch.randn_like(batch_y_mark)[0].unsqueeze(0).float().to(self.device)
         flops, params = profile(self.model, inputs=(input_x, input_x_mark, input_y, input_y_mark))
-        print("FLOPs: %.2fM" % (flops / 1e6), "Params: %.5fM" % (params / 1e6))
+        print("FLOPs: %.5fM" % (flops / 1e6), "Params: %.5fM" % (params / 1e6))
 
         if self.args.gpu is not None:
-            save_seq2seq_gpu(os.path.join(checkpoint_path, 'files'), 'parameters.txt', self.args, len(train_data), len(test_data), params, flops)
+            save_seq2seq_gpu(os.path.join(checkpoint_path, 'files'), 'parameters.txt', self.args, len(train_data), 
+                             len(test_data), params, flops, self.num_params, iter_speed_avg, test_time)
 
         return self.model
 
@@ -276,10 +305,13 @@ class Exp_Eq_Fore(Exp_Basic):
 
         preds = np.array(preds)
         trues = np.array(trues)
+        print('test shape:', preds.shape, trues.shape)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
+        print('test shape:', preds.shape, trues.shape)
 
-
+        # result save
+        # folder_path = './results/' + checkpoint_path +'/'
         if not os.path.exists(checkpoint_path):
             os.makedirs(checkpoint_path)
 

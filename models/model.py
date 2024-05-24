@@ -6,7 +6,7 @@ from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 
 from utils.masking import TriangularCausalMask, ProbMask
-from models.encoder import Encoder, EncoderLayer, ConvLayer, EncoderStack
+from models.encoder import Encoder, EncoderLayer, ConvLayer
 from models.decoder import Decoder, DecoderLayer
 from models.attn import FullAttention, ProbAttention, AttentionLayer
 from models.embed import DataEmbedding
@@ -64,6 +64,8 @@ class Eq_Fore(nn.Module):
             ],
             norm_layer=torch.nn.LayerNorm(d_model)
         )
+        # self.end_conv1 = nn.Conv1d(in_channels=label_len+out_len, out_channels=out_len, kernel_size=1, bias=True)
+        # self.end_conv2 = nn.Conv1d(in_channels=d_model, out_channels=c_out, kernel_size=1, bias=True)
         self.projection = nn.Linear(d_model, c_out, bias=True)
         
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, 
@@ -75,6 +77,8 @@ class Eq_Fore(nn.Module):
         dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask)
         dec_out = self.projection(dec_out)
         
+        # dec_out = self.end_conv1(dec_out)
+        # dec_out = self.end_conv2(dec_out.transpose(2,1)).transpose(1,2)
         if self.output_attention:
             return dec_out[:,-self.pred_len:,:], attns
         else:
@@ -107,7 +111,7 @@ class BiLSTM(nn.Module):
         out = self.fc2(out)
         return out
 
-    
+
 class Info_Cls(nn.Module):
     def __init__(self, model_pre, model_cls):
         super(Info_Cls, self).__init__()

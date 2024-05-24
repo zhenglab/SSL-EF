@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+python ../main_downstream.py --gpu 0 --seed 77 --data_type magn --model_pre Eq_Fore --model_cls BiLSTM --cleaning fill_0 --filling linear_interpolate --norm_data oneSta_oneFea --norm_type quartile_seg --fea_select all --fea_use Fourier_power_0_15 --input_window_size 1008 --input_sel_type Slide --model_pred_state resume --epochs 100 --batch_size 4 --checkpoints ../checkpoints --results ../results --enc_in 3 --dec_in 3 --c_out 3 --lr 0.00001
+python ../main_downstream.py --gpu 0 --seed 77 --data_type magn --model_pre Eq_Fore --model_cls BiLSTM --cleaning fill_0 --filling linear_interpolate --norm_data oneSta_oneFea --norm_type quartile_seg --fea_select all --fea_use Fourier_power_0_15 --input_window_size 1008 --input_sel_type Slide --model_pred_state frozen --epochs 100 --batch_size 4 --checkpoints ../checkpoints --results ../results --enc_in 3 --dec_in 3 --c_out 3 --lr 0.00001
+python ../main_downstream.py --gpu 0 --seed 77 --data_type magn --model_pre Eq_Fore --model_cls BiLSTM --cleaning fill_0 --filling linear_interpolate --norm_data oneSta_oneFea --norm_type quartile_seg --fea_select all --fea_use Fourier_power_0_15 --input_window_size 1008 --input_sel_type Slide --model_pred_state free --epochs 100 --batch_size 4 --checkpoints ../checkpoints --results ../results --enc_in 3 --dec_in 3 --c_out 3 --lr 0.00001
+
